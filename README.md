@@ -10,8 +10,8 @@
 ## MAKE AND RUN VIRTUAL ENVIRONMENT:
 
 ``` 
-	python3.4 -m venv /path/to/new/virtual/environment
-	source /path/to/new/virtual/environment/bin/activate
+	python3.4 -m venv /path/to/new/virtual/environment/folder
+	source /path/to/new/virtual/environment/folder/bin/activate
 	pip install -r /path/to/file/requirements.txt
 ```
 
