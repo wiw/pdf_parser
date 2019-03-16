@@ -7,6 +7,7 @@ openpyxl==2.5.14
 pandas==0.22.0
 pdfminer.six==20181108
 pdfminer2==20151206
+progressbar==2.5
 pycryptodome==3.7.3
 PyPDF2==1.26.0
 python-dateutil==2.8.0
