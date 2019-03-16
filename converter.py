@@ -11,6 +11,9 @@ from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfpage import PDFPage
 
+from progressbar import Bar
+from progressbar import ProgressBar as Pg
+
 import tabula
 
 config = {
@@ -101,13 +104,25 @@ def select_files(source_path):
 def parse_pdf(config):
     data, counter = {}, 1
     for pfile in config['pdf']:
-        # !NB TASK1: add progress bar per pdf file and per page
-        parsed_pdf = from_pdf_get_first_line(pfile, config)
-        for page_number in parsed_pdf['header'].keys():
-            parsed_pdf['body'].setdefault(
-                page_number, pdf_to_dataframe(pfile, page_number))
-        data.setdefault(counter, parsed_pdf)
-        counter += 1
+        print("Загружаю файл {} ...".format(os.path.basename(pfile)))
+        try:
+            parsed_pdf = from_pdf_get_first_line(pfile, config)
+            page_numbers = len(parsed_pdf['header'])
+            bar = Pg(maxval=page_numbers,
+                     widgets=[Bar(left='<', marker='.', right='>')]).start()
+            t = 0
+            for page_number in parsed_pdf['header'].keys():
+                bar.update(t)
+                t += 1
+                parsed_pdf['body'].setdefault(
+                    page_number, pdf_to_dataframe(pfile, page_number))
+            data.setdefault(counter, parsed_pdf)
+            counter += 1
+            bar.finish()
+        except Exception:
+            print("Не могу загрузить \
+файл {}, пропускаю ...".format(os.path.basename(pfile)))
+            next
     return data
 
 
