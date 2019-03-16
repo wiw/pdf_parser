@@ -1,0 +1,8 @@
+FROM ubuntu:18.04
+add-apt-repository -yu ppa:deadsnakes/ppa
+apt-get -y install python3.4 python3.4-venv python3-pip
+mkdir ~/converter & cd ~/converter
+python3.4 -m venv env34
+source env34/bin/activate
+python -m pip install --upgrade pip
+python -m pip install pdfminer.six
