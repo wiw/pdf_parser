@@ -232,14 +232,24 @@ def write_data(data, args, config):
             df.to_excel(writer, sheet_name=district_name)
 
 
-def main(args, config):
-    config.update(select_files(args.source_dir))
+def load_pdf(config):
     data = parse_pdf(config)
     parsed_data = beautiful_pdf(data)
     formatted_data = format_pdf(parsed_data)
+    return formatted_data
+
+
+def view_cli(args, config):
+    loaded_pdf = load_pdf(config)
     excel_df = parse_excel(config)
-    joined_df = filter_visits(formatted_data, excel_df)
-    write_data(joined_df, args, config)
+    joined_df = filter_visits(loaded_pdf, excel_df)
+    return joined_df
+
+
+def main(args, config):
+    config.update(select_files(args.source_dir))
+    result = view_cli(args, config)
+    write_data(result, args, config)
 
 
 if __name__ == '__main__':
