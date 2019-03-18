@@ -257,8 +257,8 @@ def write_data(data, args, config):
     with pd.ExcelWriter(path_name) as writer:
         for district_name, df in data.items():
             if df.empty:
-                print("    Файл '{}' не прошел калибровку. \
-    Пропускаю...".format(district_name))
+                print("    Файл '{}' не прошел калибровку.\n\
+        Пропускаю...".format(district_name))
                 next
             df.to_excel(writer, sheet_name=district_name)
     print("Готово\nВыход.")
@@ -274,7 +274,7 @@ def load_pdf(config):
 
 def view_cli(args, config):
     loaded_pdf = load_pdf(config)
-    print("Загружаю и распознаю калибровочный файл...")
+    print("Загружаю и распознаю калибровочный xls/xlsx файл...")
     excel_df = parse_excel(config, args)
     print("Фильтрую данные...")
     joined_df = filter_visits(loaded_pdf, excel_df)
