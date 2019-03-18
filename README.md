@@ -29,6 +29,11 @@ If you need pull new version of script, use this command
 	git pull origin master 
 ```
 
+Show help
+```
+	python converter.py --help
+```
+
 ## RUN:
 
 ```
