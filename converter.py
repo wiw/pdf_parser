@@ -27,12 +27,14 @@ config = {
 
 def parse_arguments():
     p = argparse.ArgumentParser(
-        description="Convert some pdf files of \
-medical department to tabulated view")
+        description="Программа конвертации pdf файлов \
+и вывода табличных отформатированных данных")
     p.add_argument(
-        "source_dir", help="path to folder with your \
-pdf files and single xls file", type=str)
-    p.add_argument("-o", "--output", help="path to output folder")
+        "source_dir", help="Путь до папки с исходными файлами", type=str)
+    p.add_argument("-o", "--output", help="Необязательно. \
+Путь до папки с обработанным результатом", type=str)
+    p.add_argument("-sn", "--sheet_name", help="Наименование листа с \
+калибровочными данными в xls/xlsx документе", type=str)
     args = p.parse_args()
     return args
 
@@ -95,7 +97,8 @@ def select_files(source_path):
                 ".*xlsx$", os.path.basename(x)) is not None])
             return sources
         else:
-            print("I did not find the files you need")
+            print("В указанной папке нет файлов для обработки. \
+Проверьте еще раз. Выход...")
             raise SystemExit
     except Exception as e:
         raise e
@@ -187,7 +190,7 @@ def format_pdf(data):
     return output
 
 
-def parse_excel(config):
+def parse_excel(config, args):
     def format_doctor_name(col):
         tmp = col.tolist()
         re_doctor = re.compile('(^[-а-яА-Я]*) ([А-Я]).*([А-Я]).*')
@@ -216,15 +219,21 @@ def parse_excel(config):
                                            errors='coerce').dropna()
         formatted = formatted[formatted.duration.notnull()]
         return formatted
+
+    def get_sheet_name(config, args):
+        if args.sheet_name is not None:
+            return args.sheet_name
+        return config['excel_sheet_name']
+
     if len(config['xlsx']) == 1:
         excel_df = pd.read_excel(
-            config['xlsx'][0], sheet_name=config['excel_sheet_name'])
+            config['xlsx'][0], sheet_name=get_sheet_name(config, args))
         excel_df = excel_df.iloc[3:, [0, 3, 4, 6, 7]]
         excel_df.columns = ['doctor', 'date', 'ptime', 'ftime', 'duration']
         excel_df = main_format(excel_df)
         return excel_df
     else:
-        print("Need only one Excel File. Exit...")
+        print("Нужен только один файл Excel. Выход...")
         raise SystemExit
 
 
@@ -242,13 +251,20 @@ def write_data(data, args, config):
     if args.output is not None and os.path.exists(args.output):
         default_path = args.output
     path_name = os.path.join(default_path, config['default_filename'])
+    print("Записываю обработанные таблицы в файл {}".format(path_name))
     with pd.ExcelWriter(path_name) as writer:
         for district_name, df in data.items():
+            if df.empty:
+                print("    Файл '{}' не прошел калибровку. \
+    Пропускаю...".format(district_name))
+                next
             df.to_excel(writer, sheet_name=district_name)
+    print("Готово\nВыход.")
 
 
 def load_pdf(config):
     data = parse_pdf(config)
+    print("Распознаю полученные файлы...")
     parsed_data = beautiful_pdf(data)
     formatted_data = format_pdf(parsed_data)
     return formatted_data
@@ -256,7 +272,9 @@ def load_pdf(config):
 
 def view_cli(args, config):
     loaded_pdf = load_pdf(config)
-    excel_df = parse_excel(config)
+    print("Загружаю и распознаю калибровочный файл...")
+    excel_df = parse_excel(config, args)
+    print("Фильтрую данные...")
     joined_df = filter_visits(loaded_pdf, excel_df)
     return joined_df
 
@@ -270,6 +288,3 @@ def main(args, config):
 if __name__ == '__main__':
     args = parse_arguments()
     main(args, config)
-
-# args = p.parse_args(['--output', '/home/aivankin/',\
-# '/home/aivankin/SOURCE/'])
