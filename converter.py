@@ -247,9 +247,11 @@ def filter_visits(input_dfs, filter_df):
 
 
 def write_data(data, args, config):
-    default_path = os.path.dirname(config['xlsx'][0])
+    default_path = os.path.join(os.path.dirname(config['xlsx'][0]), "output")
     if args.output is not None and os.path.exists(args.output):
         default_path = args.output
+    if not os.path.exists(default_path):
+        os.makedirs(default_path)
     path_name = os.path.join(default_path, config['default_filename'])
     print("Записываю обработанные таблицы в файл {}".format(path_name))
     with pd.ExcelWriter(path_name) as writer:
