@@ -15,9 +15,13 @@
 	pip install -r /path/to/file/requirements.txt
 ```
 
-## RUN
+## RUN:
 
-``` python converter.py /path/to/source/dir -o /path/to/optional/output/dir ```
+``` python converter.py /path/to/source/dir -o /path/to/optional/output/dir -sn 'optional_sheet_name_to_open'```
+
+## DISABLE VIRTUAL ENVIRONMENT:
+
+``` deactivate ```
 
 ## ...
 
