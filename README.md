@@ -58,7 +58,7 @@ Show help
 
 Download latest version of python package from [here](https://www.python.org/downloads/windows/) ([python-3.7.2-x86-64](https://www.python.org/ftp/python/3.7.2/python-3.7.2-amd64.exe)/[python-3.7.2-x86](https://www.python.org/ftp/python/3.7.2/python-3.7.2.exe))
 
-**Next** install Git from [git-scm.com](https://git-scm.com/download/win) and 
+**Next** install Git from [git-scm.com](https://git-scm.com/download/win) (optional detailed [guide](https://www.computerhope.com/issues/ch001927.htm))
 
 **Next** in windows command line interface
 
@@ -70,8 +70,9 @@ Download latest version of python package from [here](https://www.python.org/dow
 
 ``` 
 	cd your_project
-	virtualenv env
+	python -m virtualenv env
 	\path\to\env\Scripts\activate.bat
+	python -m pip install -U pip
 ```
 
 ### PREPARE TO RUN:
@@ -94,6 +95,10 @@ Show help
 ```
 	python converter.py --help
 ```
+
+You can use GUI github [clients](https://git-scm.com/download/gui/windows)
+
+
 
 ### RUN:
 
