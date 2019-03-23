@@ -122,9 +122,10 @@ def parse_pdf(config):
             data.setdefault(counter, parsed_pdf)
             counter += 1
             bar.finish()
-        except Exception:
+        except Exception as e:
             print("Не могу загрузить \
-файл {}, пропускаю ...".format(os.path.basename(pfile)))
+файл {}, пропускаю ...\n\
+Exception: {}".format(os.path.basename(pfile), e))
             next
     return data
 
