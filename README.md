@@ -113,3 +113,9 @@ You can use GUI github [clients](https://git-scm.com/download/gui/windows)
 ### ...
 
 ### AWESOME!
+
+## Some help for install packages without root
+[1](https://stackoverflow.com/questions/9348869/how-to-install-virtualenv-without-using-sudo)
+[2](https://stackoverflow.com/questions/7465445/how-to-install-python-modules-without-root-access)
+[3](http://notes.webutvikling.org/get-python-virtualenv-pip-without-sudo/)
+[4](https://virtualenv.pypa.io/en/latest/installation/)
