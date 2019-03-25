@@ -80,7 +80,8 @@ def from_pdf_get_first_line(pdf_path, config):
 
 
 def pdf_to_dataframe(pdf_path, page_number):
-    temp = tabula.read_pdf(pdf_path, options='--pages {}'.format(page_number))
+    temp = tabula.read_pdf(pdf_path, options='--pages {}'.format(page_number),
+                           pandas_options={"header": None})
     return temp
 
 
@@ -135,8 +136,10 @@ def beautiful_pdf(data):
     for file_pos, pdf in data.items():
         range_values = pdf['body'].keys()
         for page in range_values:
-            page_df = pdf['body'][page]
-            tmp_df = page_df.iloc[2:, [0, 1, 3]].dropna(how='all')
+            page_df, start_row = pdf['body'][page], 0
+            if page_df.iloc[0, 0] == 'Дата и':
+                start_row = 3
+            tmp_df = page_df.iloc[start_row:, [0, 1, 3]].dropna(how='all')
             tmp_df.columns = ['date', 'district', 'phone']
             output[file_pos]['body'][page] = tmp_df
     return output
@@ -162,15 +165,14 @@ def format_pdf(data):
         return pd.Series(district_strings_filtered)
 
     def get_phone(col):
-        phone_strings = col.str.cat(sep=" ", na_rep="+7 000 000-00-00") + " "
+        phone_strings = col.str.cat(sep="", na_rep="+7 000 000-00-00")
         re_phone_split = re.compile('(?:(?:\\+7 [0-9]{3} \
-[0-9]{3}-[0-9]{2}-[0-9]{2} )+)+')
+[0-9]{3}-[0-9]{2}-[0-9]{2})+)+')
         phone_strings = re_phone_split.findall(phone_strings)
-        phone_strings = [x[:-1] for x in phone_strings]
         re_phone_sep = re.compile('(\\+7 [0-9]{3} [-0-9]*).*')
-        phone_strings = [re_phone_sep.sub(
-            '\\1', x) for x in phone_strings]
+        phone_strings = [re_phone_sep.sub('\\1', x) for x in phone_strings]
         return pd.Series(phone_strings)
+
     for item, pdf in data.items():
         concat_list = []
         for number, df in pdf['body'].items():
