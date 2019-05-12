@@ -1,8 +1,26 @@
+"""
+Описание.
+
+Программа для парсинга pdf файлов и обработки пересечений данных с файлом
+Excel.
+
+Обязательные аргументы:
+
+    путь до папки с исходными файлами pdf&xls(x)
+
+Необязательные аргументы
+
+    -o путь до папки с результатом
+    -sn опциональное имя листа в файле Excel, если оно отличается о такового
+    в переменной config["excel_sheet_name"]
+"""
+
 import argparse
 import copy
 import io
 import os
 import re
+import operator as op
 
 import pandas as pd
 
@@ -16,6 +34,22 @@ from progressbar import ProgressBar as Pg
 
 import tabula
 
+from pprint import pprint as view
+
+
+"""
+Словарь с необходимой конфишурацией для запуска программы.
+
+    doctor_regex: регулярное выражение для поиска ФИО врача в заголовке
+    страницы
+
+    excel_sheet_name: наименование листа в калибровочном файле Excel
+
+    first_line_range: количество символов используемых в качестве заголовка
+    листа
+
+    default_filename: имя файла с результатом по умолчанию
+"""
 config = {
     "doctor_regex": ".* (?P<sname>[А-Яа-я].*) \
 (?P<flname>[А-Я]\\..?[А-Я]\\.).*",
@@ -26,6 +60,9 @@ config = {
 
 
 def parse_arguments():
+    """
+    Обработчик аргументов.
+    """
     p = argparse.ArgumentParser(
         description="Программа конвертации pdf файлов \
 и вывода табличных отформатированных данных")
@@ -40,6 +77,7 @@ def parse_arguments():
 
 
 def from_pdf_get_first_line(pdf_path, config):
+
     def extract_text_by_page(pdf_path):
         with open(pdf_path, 'rb') as fh:
             for page in PDFPage.get_pages(fh,
@@ -65,22 +103,28 @@ def from_pdf_get_first_line(pdf_path, config):
             return doctor_name
         else:
             return None
+
     filename = os.path.splitext(os.path.basename(pdf_path))[0]
     data = {'filename': filename,
             "header": {},
             "body": {},
+            "just_in_case": {}
             }
     counter = 1
+
     for page in extract_text_by_page(pdf_path):
         string = page[:config['first_line_range']]
         data['header'].setdefault(
             counter, extract_doctors_name(string, config['doctor_regex']))
+        data["just_in_case"].setdefault(counter, page)
         counter += 1
+
     return data
 
 
 def pdf_to_dataframe(pdf_path, page_number):
-    temp = tabula.read_pdf(pdf_path, options='--pages {}'.format(page_number),
+    temp = tabula.read_pdf(pdf_path,
+                           pages=page_number,
                            pandas_options={"header": None})
     return temp
 
@@ -107,6 +151,7 @@ def select_files(source_path):
 
 def parse_pdf(config):
     data, counter = {}, 1
+
     for pfile in config['pdf']:
         print("Загружаю файл {} ...".format(os.path.basename(pfile)))
         try:
@@ -133,20 +178,34 @@ Exception: {}".format(os.path.basename(pfile), e))
 
 def beautiful_pdf(data):
     output = copy.deepcopy(data)
+    broken_pages = {}
+
     for file_pos, pdf in data.items():
         range_values = pdf['body'].keys()
+
         for page in range_values:
             page_df, start_row = pdf['body'][page], 0
             if page_df.iloc[0, 0] == 'Дата и':
                 start_row = 3
-            tmp_df = page_df.iloc[start_row:, [0, 1, 3]].dropna(how='all')
+            if page_df.iloc[:, 3].isnull().all():
+                broken_pages.setdefault(file_pos, [])
+                broken_pages[file_pos].append(page)
+            vector_col = [0, 1, 3]
+            tmp_df = page_df.iloc[start_row:, vector_col].dropna(how='all')
             tmp_df.columns = ['date', 'district', 'phone']
             output[file_pos]['body'][page] = tmp_df
-    return output
+
+    return output, broken_pages
 
 
-def format_pdf(data):
+def format_pdf(data, broken_data):
     output = {}
+
+    def broken_exists(broken_data, item, number):
+        result = []
+        result.append(op.ne(len(broken_data[item]), 0))
+        result.append(op.contains(broken_data[item], number))
+        return all(result)
 
     def get_date(col):
         timestamp = []
@@ -154,7 +213,8 @@ def format_pdf(data):
         for idx in date_tmp.keys():
             if idx == 0 or idx % 2 == 0:
                 date_string = "{} {}".format(date_tmp[idx], date_tmp[idx + 1])
-                timestamp.append(pd.to_datetime(date_string))
+                timestamp.append(pd.to_datetime(date_string,
+                                                format='%d.%m.%Y %H:%M'))
         return pd.Series(timestamp)
 
     def get_district(col):
@@ -165,7 +225,9 @@ def format_pdf(data):
         return pd.Series(district_strings_filtered)
 
     def get_phone(col):
-        phone_strings = col.str.cat(sep="", na_rep="+7 000 000-00-00")
+        phone_strings = col
+        if isinstance(col, pd.core.series.Series):
+            phone_strings = col.str.cat(sep="", na_rep="+7 000 000-00-00")
         re_phone_split = re.compile('(?:(?:\\+7 [0-9]{3} \
 [0-9]{3}-[0-9]{2}-[0-9]{2})+)+')
         phone_strings = re_phone_split.findall(phone_strings)
@@ -178,7 +240,10 @@ def format_pdf(data):
         for number, df in pdf['body'].items():
             date = get_date(df.date)
             district = get_district(df.district)
-            phone = get_phone(df.phone)
+            raw_phone = df.phone
+            if broken_exists(broken_data, item, number):
+                raw_phone = op.getitem(pdf['just_in_case'], number)
+            phone = get_phone(raw_phone)
             list_of_series = [date, district, phone]
             cols = ['date', 'district', 'phone']
             tmp_df = pd.concat(list_of_series, axis=1, ignore_index=True)
@@ -188,12 +253,12 @@ def format_pdf(data):
             concat_list.append(tmp_df)
         pre_output = pd.concat(concat_list, ignore_index=True)
         pre_output = pre_output[pre_output.phone != '+7 000 000-00-00']
-        output.setdefault(pdf['filename'],
-                          pd.concat(concat_list, ignore_index=True))
+        output.setdefault(pdf['filename'], pre_output)
     return output
 
 
 def parse_excel(config, args):
+
     def format_doctor_name(col):
         tmp = col.tolist()
         re_doctor = re.compile('(^[-а-яА-Я]*) ([А-Я]).*([А-Я]).*')
@@ -203,9 +268,12 @@ def parse_excel(config, args):
     def format_date(df):
         sample_df = df.loc[:, ['date', 'ptime', 'ftime']]
         sample_df.date = sample_df.date.dt.strftime('%Y-%m-%d')
-        proposed = pd.to_datetime(
-            sample_df.date.map(str) + ' ' + sample_df.ptime)
-        fact = pd.to_datetime(sample_df.date.map(str) + ' ' + sample_df.ftime)
+        proposed = pd.to_datetime(sample_df.date.map(str) +
+                                  ' ' +
+                                  sample_df.ptime)
+        fact = pd.to_datetime(sample_df.date.map(str) +
+                              ' ' +
+                              sample_df.ftime)
         output = pd.concat([proposed, fact], axis=1, ignore_index=True)
         output.columns = ['ptime', 'ftime']
         return output
@@ -244,34 +312,42 @@ def filter_visits(input_dfs, filter_df):
     output = {}
     for filename, df in input_dfs.items():
         tmp = pd.merge(df, filter_df, how='inner', on=['doctor', 'date'])
-        tmp = tmp[['doctor', 'date', 'district', 'phone']]
+        tmp = tmp[['doctor', 'date', 'date', 'phone']]
         output.setdefault(filename, tmp)
     return output
 
 
 def write_data(data, args, config):
     default_path = os.path.join(os.path.dirname(config['xlsx'][0]), "output")
+
     if args.output is not None and os.path.exists(args.output):
         default_path = args.output
+
     if not os.path.exists(default_path):
         os.makedirs(default_path)
+
     path_name = os.path.join(default_path, config['default_filename'])
+    pname_robot = os.path.join(default_path, 'call_robot.csv')
     print("Записываю обработанные таблицы в файл {}".format(path_name))
+
     with pd.ExcelWriter(path_name) as writer:
+        merged_data = pd.DataFrame()
         for district_name, df in data.items():
             if df.empty:
                 print("    Файл '{}' не прошел калибровку.\n\
         Пропускаю...".format(district_name))
                 next
             df.to_excel(writer, sheet_name=district_name)
+            merged_data = pd.concat([merged_data, df.iloc[:, [2, 3]]])
+            merged_data.to_csv(pname_robot, header=False)
     print("Готово\nВыход.")
 
 
 def load_pdf(config):
     data = parse_pdf(config)
     print("Распознаю полученные файлы...")
-    parsed_data = beautiful_pdf(data)
-    formatted_data = format_pdf(parsed_data)
+    parsed_data, broken_data = beautiful_pdf(data)
+    formatted_data = format_pdf(parsed_data, broken_data)
     return formatted_data
 
 
