@@ -203,6 +203,8 @@ def format_pdf(data, broken_data):
 
     def broken_exists(broken_data, item, number):
         result = []
+        if op.eq(len(broken_data), 0):
+            return False
         result.append(op.ne(len(broken_data[item]), 0))
         result.append(op.contains(broken_data[item], number))
         return all(result)
