@@ -34,7 +34,7 @@ from progressbar import ProgressBar as Pg
 
 import tabula
 
-from pprint import pprint as view
+# from pprint import pprint as view
 
 
 """
@@ -163,8 +163,10 @@ def parse_pdf(config):
             for page_number in parsed_pdf['header'].keys():
                 bar.update(t)
                 t += 1
-                parsed_pdf['body'].setdefault(
-                    page_number, pdf_to_dataframe(pfile, page_number))
+                page_parsed = pdf_to_dataframe(pfile, page_number)
+                if page_parsed is None:
+                    continue
+                parsed_pdf['body'].setdefault(page_number, page_parsed)
             data.setdefault(counter, parsed_pdf)
             counter += 1
             bar.finish()
@@ -182,8 +184,8 @@ def beautiful_pdf(data):
 
     for file_pos, pdf in data.items():
         range_values = pdf['body'].keys()
-
         for page in range_values:
+
             page_df, start_row = pdf['body'][page], 0
             if page_df.iloc[0, 0] == 'Дата и':
                 start_row = 3
@@ -349,6 +351,7 @@ def load_pdf(config):
     data = parse_pdf(config)
     print("Распознаю полученные файлы...")
     parsed_data, broken_data = beautiful_pdf(data)
+    # return
     formatted_data = format_pdf(parsed_data, broken_data)
     return formatted_data
 
