@@ -303,7 +303,7 @@ def parse_excel(config, args):
     if len(config['xlsx']) == 1:
         excel_df = pd.read_excel(
             config['xlsx'][0], sheet_name=get_sheet_name(config, args))
-        excel_df = excel_df.iloc[3:, [0, 3, 4, 6, 7]]
+        excel_df = excel_df.iloc[3:, [0, 4, 5, 7, 8]]
         excel_df.columns = ['doctor', 'date', 'ptime', 'ftime', 'duration']
         excel_df = main_format(excel_df)
         return excel_df
