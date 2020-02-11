@@ -34,7 +34,7 @@ from progressbar import ProgressBar as Pg
 
 import tabula
 
-# from pprint import pprint as view
+from pprint import pprint as view
 
 
 """
@@ -51,11 +51,13 @@ import tabula
     default_filename: имя файла с результатом по умолчанию
 """
 config = {
-    "doctor_regex": ".* (?P<sname>[А-Яа-я].*) \
-(?P<flname>[А-Я]\\..?[А-Я]\\.).*",
+    "doctor_regex": "20[0-9]{2}(?P<full_match>[Ф|ДГП][0-9А-Яа-я\\. \
+]*\\(к.[0-9]*\\))",
     "excel_sheet_name": 'Информация о записях и приемах',
     "first_line_range": 200,
     "default_filename": "output.xlsx",
+    "year_dep_regex": "{}(Ф|ДГП)([0-9]{{1,3}})",
+    "room_regex": "\\(к\\.[0-9].*?\\)",
 }
 
 
@@ -96,13 +98,13 @@ def from_pdf_get_first_line(pdf_path, config):
 
     def extract_doctors_name(string, doctor_regex):
         regexp = re.compile(doctor_regex)
-        match = regexp.match(string)
+        match = regexp.search(string)
+        doctor_name = None
         if match is not None:
-            doctor_name = match.groupdict()
-            doctor_name['flname'] = doctor_name['flname'].replace(" ", "")
-            return doctor_name
-        else:
-            return None
+            raw_full_name = match.groupdict()
+            doctor_name = raw_full_name["full_match"]
+
+        return doctor_name
 
     filename = os.path.splitext(os.path.basename(pdf_path))[0]
     data = {'filename': filename,
@@ -173,7 +175,7 @@ def parse_pdf(config):
         except Exception as e:
             print("Не могу загрузить \
 файл {}, пропускаю ...\n\
-Exception: {}".format(os.path.basename(pfile), e))
+Exception: {}".format(os.path.basename(pfile), type(e).__name__))
             next
     return data
 
@@ -252,8 +254,7 @@ def format_pdf(data, broken_data):
             cols = ['date', 'district', 'phone']
             tmp_df = pd.concat(list_of_series, axis=1, ignore_index=True)
             tmp_df.columns = cols
-            tmp_df['doctor'] = " ".join([pdf['header'][number]['sname'],
-                                         pdf['header'][number]['flname']])
+            tmp_df['doctor'] = pdf['header'][number]
             concat_list.append(tmp_df)
         pre_output = pd.concat(concat_list, ignore_index=True)
         pre_output = pre_output[pre_output.phone != '+7 000 000-00-00']
@@ -284,7 +285,6 @@ def parse_excel(config, args):
 
     def main_format(unformatted):
         formatted = copy.deepcopy(unformatted)
-        formatted.update(format_doctor_name(unformatted.doctor))
         update_v = [formatted.loc[:, ['doctor', 'duration']],
                     format_date(unformatted)]
         formatted = pd.concat(update_v, axis=1, ignore_index=True)
@@ -303,8 +303,9 @@ def parse_excel(config, args):
     if len(config['xlsx']) == 1:
         excel_df = pd.read_excel(
             config['xlsx'][0], sheet_name=get_sheet_name(config, args))
-        excel_df = excel_df.iloc[3:, [0, 4, 5, 7, 8]]
+        excel_df = excel_df.iloc[3:, [2, 4, 5, 7, 8]]
         excel_df.columns = ['doctor', 'date', 'ptime', 'ftime', 'duration']
+        view(excel_df.doctor)
         excel_df = main_format(excel_df)
         return excel_df
     else:
@@ -358,8 +359,10 @@ def load_pdf(config):
 
 def view_cli(args, config):
     loaded_pdf = load_pdf(config)
+    view(loaded_pdf)
     print("Загружаю и распознаю калибровочный xls/xlsx файл...")
     excel_df = parse_excel(config, args)
+    view(excel_df)
     print("Фильтрую данные...")
     joined_df = filter_visits(loaded_pdf, excel_df)
     return joined_df
