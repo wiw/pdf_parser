@@ -34,7 +34,7 @@ from progressbar import ProgressBar as Pg
 
 import tabula
 
-from pprint import pprint as view
+# from pprint import pprint as view
 
 
 """
@@ -359,10 +359,8 @@ def load_pdf(config):
 
 def view_cli(args, config):
     loaded_pdf = load_pdf(config)
-    view(loaded_pdf)
     print("Загружаю и распознаю калибровочный xls/xlsx файл...")
     excel_df = parse_excel(config, args)
-    view(excel_df)
     print("Фильтрую данные...")
     joined_df = filter_visits(loaded_pdf, excel_df)
     return joined_df
