@@ -56,8 +56,6 @@ config = {
     "excel_sheet_name": 'Информация о записях и приемах',
     "first_line_range": 200,
     "default_filename": "output.xlsx",
-    "year_dep_regex": "{}(Ф|ДГП)([0-9]{{1,3}})",
-    "room_regex": "\\(к\\.[0-9].*?\\)",
 }
 
 
@@ -305,7 +303,6 @@ def parse_excel(config, args):
             config['xlsx'][0], sheet_name=get_sheet_name(config, args))
         excel_df = excel_df.iloc[3:, [2, 4, 5, 7, 8]]
         excel_df.columns = ['doctor', 'date', 'ptime', 'ftime', 'duration']
-        view(excel_df.doctor)
         excel_df = main_format(excel_df)
         return excel_df
     else:
