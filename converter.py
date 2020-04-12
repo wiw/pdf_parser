@@ -52,7 +52,7 @@ import tabula
 """
 config = {
     "doctor_regex": "20[0-9]{2}(?P<full_match>[Ф|ДГП][0-9А-Яа-я\\. \
-]*\\(к.[0-9]*\\))",
+]*\\(к.[0-9\\-А-Я]*\\))",
     "excel_sheet_name": 'Информация о записях и приемах',
     "first_line_range": 200,
     "default_filename": "output.xlsx",
@@ -349,7 +349,6 @@ def load_pdf(config):
     data = parse_pdf(config)
     print("Распознаю полученные файлы...")
     parsed_data, broken_data = beautiful_pdf(data)
-    # return
     formatted_data = format_pdf(parsed_data, broken_data)
     return formatted_data
 
