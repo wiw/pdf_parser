@@ -77,7 +77,6 @@ def parse_arguments():
 
 
 def from_pdf_get_first_line(pdf_path, config):
-
     def extract_text_by_page(pdf_path):
         with open(pdf_path, 'rb') as fh:
             for page in PDFPage.get_pages(fh,
@@ -94,15 +93,14 @@ def from_pdf_get_first_line(pdf_path, config):
                 converter.close()
                 fake_file_handle.close()
 
-    def extract_doctors_name(string, doctor_regex):
-        regexp = re.compile(doctor_regex)
-        match = regexp.search(string)
-        doctor_name = None
-        if match is not None:
-            raw_full_name = match.groupdict()
-            doctor_name = raw_full_name["full_match"]
+    def extract_doctors_name(string):
+        prep_string = string.split(' ')
+        prep_string = [x for x in prep_string if '_' in x]
 
-        return doctor_name
+        if len(prep_string) > 1:
+            raise Exception('Предоставлено более чем одно ФИО врача')
+
+        return prep_string[0][4:]
 
     filename = os.path.splitext(os.path.basename(pdf_path))[0]
     data = {'filename': filename,
@@ -115,7 +113,7 @@ def from_pdf_get_first_line(pdf_path, config):
     for page in extract_text_by_page(pdf_path):
         string = page[:config['first_line_range']]
         data['header'].setdefault(
-            counter, extract_doctors_name(string, config['doctor_regex']))
+            counter, extract_doctors_name(string))
         data["just_in_case"].setdefault(counter, page)
         counter += 1
 
@@ -125,7 +123,8 @@ def from_pdf_get_first_line(pdf_path, config):
 def pdf_to_dataframe(pdf_path, page_number):
     temp = tabula.read_pdf(pdf_path,
                            pages=page_number,
-                           pandas_options={"header": None})
+                           lattice=True,
+                           pandas_options={"header": None})[0]
     return temp
 
 
@@ -139,7 +138,7 @@ def select_files(source_path):
             sources.setdefault('pdf', [p for p in files if re.match(
                 ".*pdf$", os.path.basename(p)) is not None])
             sources.setdefault('xlsx', [x for x in files if re.match(
-                ".*xlsx$", os.path.basename(x)) is not None])
+                "[^~$]*.xls.?$", os.path.basename(x)) is not None])
             return sources
         else:
             print("В указанной папке нет файлов для обработки. \
@@ -186,9 +185,9 @@ def beautiful_pdf(data):
         range_values = pdf['body'].keys()
         for page in range_values:
 
-            page_df, start_row = pdf['body'][page], 0
-            if page_df.iloc[0, 0] == 'Дата и':
-                start_row = 3
+            page_df, start_row = pdf['body'][page], 1
+            # if page_df.iloc[0, 0] == 'Дата и':
+            #     start_row = 3
             if page_df.iloc[:, 3].isnull().all():
                 broken_pages.setdefault(file_pos, [])
                 broken_pages[file_pos].append(page)
@@ -212,44 +211,46 @@ def format_pdf(data, broken_data):
         return all(result)
 
     def get_date(col):
-        timestamp = []
         date_tmp = col.dropna().reset_index().date
-        for idx in date_tmp.keys():
-            if idx == 0 or idx % 2 == 0:
-                date_string = "{} {}".format(date_tmp[idx], date_tmp[idx + 1])
-                timestamp.append(pd.to_datetime(date_string,
-                                                format='%d.%m.%Y %H:%M'))
-        return pd.Series(timestamp)
+        date_tmp = date_tmp.replace(value=' ', to_replace='\\r', regex=True)
+        timestamp = pd.to_datetime(date_tmp, format='%d.%m.%Y %H:%M')
+        return timestamp
 
-    def get_district(col):
-        district_strings = col.str.cat(sep=" ").split(") К")
-        regex = re.compile(".*?\\((?P<district>.*No[0-9]{1,2}).*")
-        district_strings_filtered = [
-            regex.sub('\\g<district>', item) for item in district_strings]
-        return pd.Series(district_strings_filtered)
+    # Deprecated function
+    # def get_district(col):
+    #     district_strings = col.dropna().reset_index().district
+    #     district_strings = district_strings.str.cat(sep=" ").split(") К")
+    #     regex = re.compile(".*?\\((?P<district>.*No[0-9]{1,2}).*")
+    #     district_strings_filtered = [regex.sub('\\g<district>', item) for item in district_strings]
+    #     return pd.Series(district_strings_filtered)
 
     def get_phone(col):
-        phone_strings = col
-        if isinstance(col, pd.core.series.Series):
-            phone_strings = col.str.cat(sep="", na_rep="+7 000 000-00-00")
-        re_phone_split = re.compile('(?:(?:\\+7 [0-9]{3} \
-[0-9]{3}-[0-9]{2}-[0-9]{2})+)+')
-        phone_strings = re_phone_split.findall(phone_strings)
+        parsed_phone = []
+        phone_col = col.dropna().reset_index().phone
         re_phone_sep = re.compile('(\\+7 [0-9]{3} [-0-9]*).*')
-        phone_strings = [re_phone_sep.sub('\\1', x) for x in phone_strings]
-        return pd.Series(phone_strings)
+        for raw_phone in phone_col:
+            _phone = '+7 000 000-00-00'
+            phone_sequence = raw_phone.split('\r')
+            phone_candidate = list(filter(re_phone_sep.match, phone_sequence))
+            if phone_candidate:
+                _phone = phone_candidate[0]
+
+            parsed_phone.append(_phone)
+        return pd.Series(parsed_phone)
 
     for item, pdf in data.items():
         concat_list = []
         for number, df in pdf['body'].items():
             date = get_date(df.date)
-            district = get_district(df.district)
+            # district = get_district(df.district)
             raw_phone = df.phone
             if broken_exists(broken_data, item, number):
                 raw_phone = op.getitem(pdf['just_in_case'], number)
             phone = get_phone(raw_phone)
-            list_of_series = [date, district, phone]
-            cols = ['date', 'district', 'phone']
+            # list_of_series = [date, district, phone]
+            # cols = ['date', 'district', 'phone']
+            list_of_series = [date, phone]
+            cols = ['date', 'phone']
             tmp_df = pd.concat(list_of_series, axis=1, ignore_index=True)
             tmp_df.columns = cols
             tmp_df['doctor'] = pdf['header'][number]
@@ -261,22 +262,20 @@ def format_pdf(data, broken_data):
 
 
 def parse_excel(config, args):
-
-    def format_doctor_name(col):
-        tmp = col.tolist()
-        re_doctor = re.compile('(^[-а-яА-Я]*) ([А-Я]).*([А-Я]).*')
-        tmp = [re_doctor.sub('\\1 \\2.\\3.', x) for x in tmp]
-        return pd.Series(tmp, name='doctor')
+    # NOTE! удаленная функция в связи с облегчением парсинга файла
+    # def format_doctor_name(col):
+    #     tmp = col.tolist()
+    #     re_doctor = re.compile('(^[-а-яёЁА-Я]*) ([А-ЯЁ]).*([А-ЯЁ]).*')
+    #     tmp = [re_doctor.sub('\\1 \\2.\\3.', x) for x in tmp]
+    #     return pd.Series(tmp, name='doctor')
 
     def format_date(df):
         sample_df = df.loc[:, ['date', 'ptime', 'ftime']]
-        sample_df.date = sample_df.date.dt.strftime('%Y-%m-%d')
+        sample_df.date = pd.to_datetime(sample_df.date)
         proposed = pd.to_datetime(sample_df.date.map(str) +
-                                  ' ' +
-                                  sample_df.ptime)
+                                  ' ' + sample_df.ptime)
         fact = pd.to_datetime(sample_df.date.map(str) +
-                              ' ' +
-                              sample_df.ftime)
+                              ' ' + sample_df.ftime)
         output = pd.concat([proposed, fact], axis=1, ignore_index=True)
         output.columns = ['ptime', 'ftime']
         return output
@@ -301,7 +300,7 @@ def parse_excel(config, args):
     if len(config['xlsx']) == 1:
         excel_df = pd.read_excel(
             config['xlsx'][0], sheet_name=get_sheet_name(config, args))
-        excel_df = excel_df.iloc[3:, [2, 4, 5, 7, 8]]
+        excel_df = excel_df.iloc[3:, [3, 5, 6, 8, 9]]
         excel_df.columns = ['doctor', 'date', 'ptime', 'ftime', 'duration']
         excel_df = main_format(excel_df)
         return excel_df
