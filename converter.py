@@ -17,6 +17,7 @@ Excel.
 
 import argparse
 import copy
+from datetime import datetime
 import io
 import os
 import re
@@ -77,6 +78,9 @@ def parse_arguments():
 
 
 def from_pdf_get_first_line(pdf_path, config):
+    import locale
+    locale.setlocale(locale.LC_ALL, 'ru_RU')
+
     def extract_text_by_page(pdf_path):
         with open(pdf_path, 'rb') as fh:
             for page in PDFPage.get_pages(fh,
@@ -102,11 +106,29 @@ def from_pdf_get_first_line(pdf_path, config):
 
         return prep_string[0][4:]
 
+    def extract_date(string):
+
+        regex = re.compile('.*Дата приема: (?P<rusdate>[0-9]{1,2} [а-яёА-ЯЁ].* [0-9]{4}).*')
+        match = regex.match(string)
+
+        try:
+            russian_date = match.group('rusdate')
+
+            day, month, year = russian_date.split(' ')
+            month = month.capitalize()[:3]
+            day = '0' + day if len(day) == 1 else day
+            russian_date = ' '.join([day, month, year])
+
+            return datetime.strptime(russian_date, '%d %b %Y')
+        except (AttributeError, IndexError):
+            raise Exception('Не удалось разобрать дату приема. Возможно изменился формат даты.')
+
     filename = os.path.splitext(os.path.basename(pdf_path))[0]
     data = {'filename': filename,
             "header": {},
             "body": {},
-            "just_in_case": {}
+            "just_in_case": {},
+            "loaded_date": {}
             }
     counter = 1
 
@@ -115,6 +137,7 @@ def from_pdf_get_first_line(pdf_path, config):
         data['header'].setdefault(
             counter, extract_doctors_name(string))
         data["just_in_case"].setdefault(counter, page)
+        data["loaded_date"].setdefault(counter, extract_date(string))
         counter += 1
 
     return data
@@ -194,6 +217,7 @@ def beautiful_pdf(data):
             vector_col = [0, 1, 3]
             tmp_df = page_df.iloc[start_row:, vector_col].dropna(how='all')
             tmp_df.columns = ['date', 'district', 'phone']
+            tmp_df.date = pdf['loaded_date'][page].strftime('%d.%m.%Y') + ' ' + tmp_df.date
             output[file_pos]['body'][page] = tmp_df
 
     return output, broken_pages
@@ -212,7 +236,7 @@ def format_pdf(data, broken_data):
 
     def get_date(col):
         date_tmp = col.dropna().reset_index().date
-        date_tmp = date_tmp.replace(value=' ', to_replace='\\r', regex=True)
+        date_tmp = date_tmp.replace(value='', to_replace='\\r.*', regex=True)
         timestamp = pd.to_datetime(date_tmp, format='%d.%m.%Y %H:%M')
         return timestamp
 
@@ -262,12 +286,6 @@ def format_pdf(data, broken_data):
 
 
 def parse_excel(config, args):
-    # NOTE! удаленная функция в связи с облегчением парсинга файла
-    # def format_doctor_name(col):
-    #     tmp = col.tolist()
-    #     re_doctor = re.compile('(^[-а-яёЁА-Я]*) ([А-ЯЁ]).*([А-ЯЁ]).*')
-    #     tmp = [re_doctor.sub('\\1 \\2.\\3.', x) for x in tmp]
-    #     return pd.Series(tmp, name='doctor')
 
     def format_date(df):
         sample_df = df.loc[:, ['date', 'ptime', 'ftime']]
