@@ -79,7 +79,7 @@ def parse_arguments():
 
 def from_pdf_get_first_line(pdf_path, config):
     import locale
-    locale.setlocale(locale.LC_ALL, 'ru_RU')
+    locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
 
     def extract_text_by_page(pdf_path):
         with open(pdf_path, 'rb') as fh:
