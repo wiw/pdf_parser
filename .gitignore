@@ -6,3 +6,7 @@ build/
 __pycache__/
 
 *.spec
+
+venv/*
+
+.idea/*
