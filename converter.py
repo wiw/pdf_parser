@@ -34,6 +34,7 @@ from progressbar import Bar
 from progressbar import ProgressBar as Pg
 
 import tabula
+import dateparser
 
 # from pprint import pprint as view
 
@@ -78,8 +79,6 @@ def parse_arguments():
 
 
 def from_pdf_get_first_line(pdf_path, config):
-    import locale
-    locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
 
     def extract_text_by_page(pdf_path):
         with open(pdf_path, 'rb') as fh:
@@ -114,12 +113,7 @@ def from_pdf_get_first_line(pdf_path, config):
         try:
             russian_date = match.group('rusdate')
 
-            day, month, year = russian_date.split(' ')
-            month = month.capitalize()[:3]
-            day = '0' + day if len(day) == 1 else day
-            russian_date = ' '.join([day, month, year])
-
-            return datetime.strptime(russian_date, '%d %b %Y')
+            return dateparser.parse(russian_date, languages=['ru'], settings={'DATE_ORDER': 'DMY'})
         except (AttributeError, IndexError):
             raise Exception('Не удалось разобрать дату приема. Возможно изменился формат даты.')
 
