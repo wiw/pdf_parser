@@ -35,6 +35,7 @@ from progressbar import ProgressBar as Pg
 
 import tabula
 import dateparser
+import traceback
 
 # from pprint import pprint as view
 
@@ -128,10 +129,12 @@ def from_pdf_get_first_line(pdf_path, config):
 
     for page in extract_text_by_page(pdf_path):
         string = page[:config['first_line_range']]
-        data['header'].setdefault(
-            counter, extract_doctors_name(string))
-        data["just_in_case"].setdefault(counter, page)
-        data["loaded_date"].setdefault(counter, extract_date(string))
+        try:
+            data['header'].setdefault(counter, extract_doctors_name(string))
+            data["just_in_case"].setdefault(counter, page)
+            data["loaded_date"].setdefault(counter, extract_date(string))
+        except Exception as e:
+            continue
         counter += 1
 
     return data
@@ -190,7 +193,8 @@ def parse_pdf(config):
             print("Не могу загрузить \
 файл {}, пропускаю ...\n\
 Exception: {}".format(os.path.basename(pfile), type(e).__name__))
-            next
+            print(traceback.print_exc())
+            continue
     return data
 
 
