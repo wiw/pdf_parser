@@ -1,0 +1,14 @@
+root = true
+
+[*.md]
+max_line_length = 80
+
+[*.puml]
+max_line_length = 80
+indent_style = space
+indent_size = 2
+
+[*.py]
+max_line_length = 80
+indent_style = space
+indent_size = 4

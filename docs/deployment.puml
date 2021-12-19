@@ -1,0 +1,51 @@
+@startuml
+
+left to right direction
+
+component Web_Interface as wbi
+
+actor Admin
+
+actor EndUser
+
+rectangle AnyVPS {
+    component API as api
+
+    component InterfaceDatabase as idb
+
+    component ParseAndAnalyzeService as pas
+
+    component SQLiteDB as db
+
+    component EmailService as email
+
+    component Storage as ss
+
+    component RabbitMQ as brocker
+
+    component FileStorage as ss
+}
+
+wbi --> api: Запрос к АПИ для расчета сводных отчетов
+
+Admin --> wbi:передача данных с файлом для анализа
+
+pas <.> ss: сохранение отчетов
+
+ss ..> email: вставка ссылок на отчеты в письма
+
+EndUser <--- email: Отправка писем
+
+api ..> Admin: *Отправка данных о процессе обработки и конечный результат
+
+db <-> idb: БД SQLite взаимодействует с приложением через интерфейс
+email <-> idb: Сервис отправки почты запрашивает данные в БД
+pas <-> idb: Сервис анализа отчетов сохраняет ссылки на результаты в БД
+api <-> idb: АПИ взаимодействует с БД для формирования результата
+
+api <--> brocker: АПИ взиамодействует с брокером сообщений
+pas <-> brocker: Сервис анализа отчетов взаимодействует с брокером сообщений
+email <-> brocker: Сервис отправки почты взаимодействует с брокером сообщений
+
+
+@enduml
