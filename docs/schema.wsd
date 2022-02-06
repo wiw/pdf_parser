@@ -1,0 +1,71 @@
+@startuml
+'https://plantuml.com/class-diagram
+!define table(x) entity x << (T,#FFAAAA) >>
+!define primary_key(x) <u><b>x</b></u>
+!define attr(x) <b>x</b>
+hide methods
+hide stereotypes
+hide empty members
+
+header 7846 Оптимизация стоимости корзины ломов
+
+title Диаграмма структуры базы данных
+
+
+table(questionnaire) {
+    primary_key(id) uuid
+    --
+    attr(task_id) ForeignKey(task) not null
+    --
+    attr(questionnaire_name) varchar(1024) not null
+    --
+    attr(questionnaire_file_path) varchar(2048) not null
+    --
+    attr(upload_datetime) datetime null
+    --
+    attr(is_processed) boolean not null default=False
+    --
+    attr(is_created_report) boolean not null default=False
+}
+
+table(report) {
+    primary_key(id) uuid
+    --
+    attr(task_id) ForeignKey(task) not null
+    --
+    attr(questionnaire_id) ForeignKey(task) null
+    --
+    attr(email_id) ForeignKey(email) null
+    --
+    attr(report_readable_name) varchar(2048) null
+    --
+    attr(report_file_path) varchar(2048) null
+    --
+    attr(create_datetime) datetime null
+}
+
+table(task) {
+    primary_key(id) uuid
+    --
+    attr(polls_number) int not null
+    --
+    attr(processed_of_polls_number) int null
+    --
+    attr(create_datetime) datetime
+    --
+    attr(is_closed) boolean default=False
+}
+
+table(email) {
+    primary_key(id) uuid
+    --
+    attr(send_datetime) datetime
+}
+
+task ||--|{ questionnaire
+task ||--|{ report
+questionnaire ||--|| report
+report }|--|| email
+
+
+@enduml
