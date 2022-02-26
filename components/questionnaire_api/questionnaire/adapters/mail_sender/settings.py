@@ -1,4 +1,4 @@
-from pydantic import BaseSettings, EmailStr
+from pydantic import BaseSettings, EmailStr, AnyUrl
 
 
 class EmailSettings(BaseSettings):
@@ -6,3 +6,4 @@ class EmailSettings(BaseSettings):
     EMAIL_PASS: str
     EMAIL_ADDRESS: EmailStr
     EMAIL_SMTP_PORT: int
+    EMAIL_SERVER: AnyUrl

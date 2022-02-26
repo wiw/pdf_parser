@@ -22,3 +22,17 @@ class BrokerSettings(BaseSettings):
             host=self.RABBIT_HOST,
             port=self.RABBIT_PORT,
         )
+
+    LOGGING_LEVEL: str = 'INFO'
+
+    @property
+    def logging_config(self):
+        return {
+            'loggers': {
+                'kombu': {
+                    'handlers': ['default'],
+                    'level': self.LOGGING_LEVEL,
+                    'propagate': False
+                }
+            }
+        }

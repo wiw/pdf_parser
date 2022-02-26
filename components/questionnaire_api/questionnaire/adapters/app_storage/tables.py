@@ -58,6 +58,10 @@ email = Table(
     'email',
     metadata,
     Column('id', UUIDType(binary=False), primary_key=True, default=uuid.uuid4),
+    Column('appeal', String, nullable=True),
+    Column('full_name', String, nullable=True),
+    Column('title', String, nullable=True),
+    Column('body', String, nullable=True),
     Column('send_datetime', DateTime, default=datetime.utcnow),
 
 )
