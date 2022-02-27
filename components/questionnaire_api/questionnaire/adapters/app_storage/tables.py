@@ -51,7 +51,8 @@ questionnaire = Table(
     Column('upload_datetime', DateTime, default=datetime.utcnow),
     Column('is_processed', Boolean, default=False),
     Column('is_created_report', Boolean, default=False),
-
+    Column('questionnaire_type_id', UUIDType(binary=False),
+           ForeignKey('questionnaire_types.id'), nullable=True)
 )
 
 email = Table(
@@ -63,5 +64,10 @@ email = Table(
     Column('title', String, nullable=True),
     Column('body', String, nullable=True),
     Column('send_datetime', DateTime, default=datetime.utcnow),
+)
 
+questionnaire_types = Table(
+    'questionnaire_types', metadata,
+    Column('id', UUIDType(binary=False), primary_key=True, default=uuid.uuid4),
+    Column('type_name', String, nullable=False),
 )

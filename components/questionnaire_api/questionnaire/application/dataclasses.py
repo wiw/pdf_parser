@@ -8,6 +8,11 @@ raw_info = List[Dict[str, Union[str, datetime]]]
 
 
 @dataclass
+class QuestionnaireType:
+    name: str
+
+
+@dataclass
 class Email:
     full_name: str
     email_address: EmailStr
@@ -28,6 +33,7 @@ class Report:
 class Questionnaire:
     questionnaire_name: str
     file_path: FilePath
+    questionnaire_type: Optional[QuestionnaireType] = None
     upload_datetime: Optional[datetime] = field(factory=datetime.utcnow)
     is_processed: bool = False
     is_created_report: bool = False

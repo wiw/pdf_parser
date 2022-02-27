@@ -5,15 +5,25 @@ from questionnaire.application.dataclasses import (
     Questionnaire,
     Task,
     Email,
+    QuestionnaireType,
 )
 from questionnaire.adapters.app_storage.tables import (
     task,
     report,
     questionnaire,
     email,
+    questionnaire_types,
 )
 
 mapper = registry()
+
+mapper.map_imperatively(
+    QuestionnaireType,
+    questionnaire_types,
+    properties={
+        'name': questionnaire_types.c.type_name
+    }
+)
 
 mapper.map_imperatively(
     Report,
@@ -32,6 +42,10 @@ mapper.map_imperatively(
         'file_path': questionnaire.c.questionnaire_file_path,
         'reports': relationship(
             'Questionnaire.id==Report.questionnaire_id', lazy='joined'
+        ),
+        'questionnaire_type': relationship(
+            'QuestionnaireType.id==Questionnaire.questionnaire_type_id',
+            lazy='joined'
         )
     }
 )

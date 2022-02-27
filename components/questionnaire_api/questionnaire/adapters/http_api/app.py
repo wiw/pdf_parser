@@ -4,7 +4,7 @@ import falcon
 
 from classic.http_api import App
 
-from questionnaire.application.dashboard import services
+from ...application import services
 
 from . import controllers
 
@@ -12,7 +12,7 @@ from . import controllers
 def create_app(
     is_dev_mode: bool,
     allow_origins: Union[str, Tuple[str, ...]],
-    questionnaire: services.QuestionnaireService,
+    task: services.TaskService,
 ) -> App:
     if is_dev_mode:
         cors_middleware = falcon.CORSMiddleware(allow_origins='*')
@@ -24,9 +24,7 @@ def create_app(
     app = App(middleware=middleware, prefix='/api')
 
     app.register(
-        controllers.QuestionnaireController(
-            questionnaire=questionnaire
-        )
+        controllers.TaskController(task=task)
     )
 
     return app

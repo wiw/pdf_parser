@@ -11,7 +11,7 @@ from questionnaire.adapters import (
     message_bus,
     http_api,
 )
-from questionnaire.application.dashboard import services
+from questionnaire.application import services
 
 
 class Settings:
@@ -55,7 +55,8 @@ class MailSending:
 
 
 class Application:
-    questionnaire_service = services.QuestionnaireService(
+    task_service = services.TaskService(
+        task_repo=DB.task_repo,
         questionnaire_repo=DB.questionnaire_repo,
         publisher=MessageBus.publisher,
     )
@@ -72,5 +73,5 @@ class Aspects:
 app = http_api.create_app(
     is_dev_mode=Application.is_dev_mode,
     allow_origins=Application.allow_origins,
-    questionnaire=Application.questionnaire_service,
+    task=Application.task_service,
 )
