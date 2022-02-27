@@ -30,7 +30,6 @@ class TaskService:
     @join_point
     @validate_with_dto
     def add_task(self, params: QuestionnaireInfo):
-        ...
         # TODO: сделать конкретная реализация забора данных из файла
         # polls_number = self._get_polls_number(params.files)
         # task = Task(
@@ -41,6 +40,7 @@ class TaskService:
         # for _file in params.files:
         #     with io.FileIO('wb') as handle:
         #         handle.write(_file)
+        return 'Task added'
 
     @staticmethod
     def _get_polls_number(q: List[bytes]):
@@ -48,11 +48,11 @@ class TaskService:
 
     @join_point
     def get_question_type(self):
-        ...
+        return ['type1', 'type2', 'type3']
 
     @join_point
     def get_treatment_status(self):
-        ...
+        return 'In proceed... Remaining to process some reports'
 
 
 @component
@@ -64,7 +64,7 @@ class AnalyzeService:
 
     @join_point
     def analyze_questionnaire(self):
-        ...
+        return
 
 
 @component
@@ -75,4 +75,4 @@ class EmailService:
 
     @join_point
     def send_report_result(self):
-        ...
+        return 'send email'
