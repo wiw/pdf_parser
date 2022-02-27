@@ -11,9 +11,12 @@ class TaskController:
 
     @join_point
     def on_post_add_task(self, request, response):
-        self.task.add_task(
+        _response = self.task.add_task(
             **request.media,
         )
+        response.media = {
+            'response': _response
+        }
 
     @join_point
     def on_get_get_question_type(self, request, response):

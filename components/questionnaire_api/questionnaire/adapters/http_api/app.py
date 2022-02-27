@@ -24,7 +24,8 @@ def create_app(
     app = App(middleware=middleware, prefix='/api')
 
     app.register(
-        controllers.TaskController(task=task)
+        controller=controllers.TaskController(task=task),
+        url='',
     )
 
     return app

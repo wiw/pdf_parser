@@ -1,0 +1,58 @@
+openapi: 3.0.0
+info:
+  title: API анализатора опросов врачей
+  description: Анализ опросников врачей с целью предотвращения профессионального выгорания
+  version: 1.0.0
+paths:
+  /api/add_task:
+    post:
+      summary: Добавляет задачу на анализ опросников
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - load_question
+              properties:
+                load_question:
+                  type: array
+                  required:
+                    - file
+                    - test_type
+                  items:
+                    properties:
+                      file:
+                        type: string
+                        format: binary
+                      test_type:
+                        type: "string"
+      responses:
+        '200':
+          description: OK
+  /api/get_question_type:
+    get:
+      summary: Возвращает тип опросника
+      responses:
+        '200':
+          description: JSON обьект с типами доступных видов опросника, определяет используемый алгорит обработки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  types:
+                    type: array
+                    items:
+                      type: string
+  /api/get_treatment_status:
+    get:
+      summary: Возвращает статус обработки опросника
+      responses:
+        '200':
+          description: Строка с прогрессом по обработке опросника
+          content:
+            application/json:
+              schema:
+                type: string
